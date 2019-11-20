@@ -1,0 +1,205 @@
+package com.abcbank.bankingservice.controller;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.abcbank.bankingservice.business.ServiceImpl;
+import com.abcbank.bankingservice.model.Account;
+import com.abcbank.bankingservice.model.Customer;
+
+@RestController
+public class RestControllerBanking {
+	
+	@Autowired
+	ServiceImpl businessServices;
+	
+	@GetMapping("/")
+	public String getInfo() {
+		
+		
+		return businessServices.getInfo();
+	}
+	
+	@GetMapping("/accounts")
+	public List<Account> getAllAccount(){
+		return businessServices.getAllAccounts();
+		
+	}
+	
+	@GetMapping("/customer")
+	public Customer getCustomer(@RequestParam String fstName, @RequestParam String mdlName,@RequestParam String lstName) {
+		
+		List<Customer> customers= new ArrayList<Customer>();
+				
+		customers=	businessServices.getCustomers(new String[]{fstName},new String[]{mdlName},new String[]{lstName});
+		if(customers.isEmpty()) {
+			System.out.println("BankingRestController.getCustomer(): No datafound");
+			return null;	
+		}else {			
+			return customers.get(0);
+		}
+		
+	}
+	
+	@GetMapping("/customers")
+	public List<Customer> getCustomers(@RequestParam String[] fstNames, 
+			@RequestParam String[] mdlNames,@RequestParam String[] lstNames){
+		List<Customer> customers= new ArrayList<Customer>();
+		
+		customers=	businessServices.getCustomers(fstNames,mdlNames,lstNames);
+		if(customers.isEmpty()) {
+			System.out.println("BankingRestController.getCustomer(): No datafound");
+			return null;	
+		}else {			
+			return customers;
+		}
+	}
+	
+	/**  
+	 * addCustomer
+	 * Logic
+	 * 1) validate email id
+	 * 2) validate mandatory first name 
+	 *Test Cases Mockito-Test01,Mockito-Test02, Mockito-Test03,Mockito-Test04,Mockito-Test05
+	 *
+	 * 
+	 */
+	@PostMapping("/addCustomer")
+	public Customer addCustomer(@RequestBody Customer customer){
+		
+		/**
+		 * Logic 1 Mockito-Test01,Mockito-Test02
+		 * validate mandatory first name
+		 */
+		
+		if(customer.getFirstName()==null) {
+			throw new InvalidRequestException(); 
+		}
+		 
+		/**
+		 * Logic 2 Mockito-Test03,Mockito-Test04,Mockito-Test02
+		 * validate email id
+		 */
+		
+		if(customer.getEmailId()!=null&&!customer.getEmailId().contains("@")) {
+			throw new InvalidRequestException();
+		}
+		
+		/**
+		 * Core Logic(3)
+		 * 
+		 * Mockito-Test05
+		 * ensure businessServices.addCustomer() is invoked only once
+		 */
+		
+		businessServices.addCustomer(customer);		
+		return customer;
+		
+	}
+	
+	/**  
+	 * addCustomer
+	 * Logic: 
+	 * 1) Call businessServices.addAccount
+	 * 	
+	 * 
+	 * Test:
+	 * Mockito-Test06	
+	 * 1) Pass valid Account object and ensure businessServices.addAccount is invoked only once
+	 * Mockito-Test07	  
+	 * 1) Pass null as an input and check response status is forbidden
+	 * 
+	 * 
+	 */
+	@PostMapping("/addAccount")
+	public Account addAccount(@RequestBody Account account){
+		if(account == null) {
+			throw new InvalidRequestException();
+		}
+		return businessServices.addAccount(account);		
+	}
+	
+		
+	
+	/**
+	 * localTransfer
+	 * Logic
+	 * 1) check account numbers and fund is valid (non zero)
+	 * 2) invoke businessService.transferfund
+	 * Test:
+	 * Mockito-Test08	
+	 * 1) Pass 0 as fromAccNo and check for boolean response
+	 * Mockito-Test09
+	 * 1) Pass 0 as toAccNo and check for boolean response
+	 * Mockito-Test10
+	 * 1) Pass 0 as fund and check for boolean response
+	 * 
+	 * @param fromAccNo
+	 * @param toAccountNo
+	 * @param fund
+	 * @return
+	 */
+	@PostMapping("/localFundTransfer")
+	public boolean localTransfer(long fromAccNo,long toAccNo, long fund) {
+		//businessServices.transferFund(fromAccNo, toAccNo, fund); // uncomment this line to fail Mockito-Test08,Mockito-Test09, Mockito-Test10
+		if(fromAccNo==0) {
+			throw new  InvalidRequestException();
+		}
+		
+		if(toAccNo==0) {
+			throw new  InvalidRequestException();
+		}
+		
+		if(fund==0) {
+			throw new  InvalidRequestException();
+		}
+		
+		if(businessServices.transferFund(fromAccNo, toAccNo, fund)) {
+			return true;
+		}else {
+			throw new InvalidRequestException();
+		}
+		
+	}
+	
+	/**  
+	 * modifyCustomer
+	 * Logic: 
+	 * 1) Check input is not null
+	 * 2) Call businessServices.modifyCustomer	 * 
+	 * 	
+	 * 
+	 * Test:
+	 * Mockito-Test11	
+	 * 1) Pass valid Customer object ensure businessServices.modifyCustomer is invoked only once
+	 * Mockito-Test12	  
+	 * 1) Pass null as an input and check response status is forbidden(405) 
+	 */
+	
+	@PostMapping("/modifyCustomer")
+	public boolean modifyCustomer(@RequestBody Customer cust){
+		if(cust == null) {
+			throw new InvalidRequestException();
+		}		
+		return businessServices.modifyCustomer(cust);
+	}
+		
+}
+@ResponseStatus(value = HttpStatus.FORBIDDEN, reason="Request invalid")
+class InvalidRequestException extends RuntimeException {
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 2436621286930568932L;
+	
+}
